@@ -3,26 +3,26 @@
 ## Фаза 1: Инициализация проекта
 
 ### 1.1 Создание структуры проекта
-- [ ] Создать solution файл
-- [ ] Создать проект Worker Service (.NET 9)
+- [x] Создать solution файл
+- [x] Создать проект Worker Service (.NET 9)
 - [ ] Настроить .editorconfig (уже есть)
 - [ ] Добавить .gitignore (уже есть)
-- [ ] Создать README.md с описанием проекта
+- [x] Создать README.md с описанием проекта
 
 ### 1.2 Установка NuGet пакетов
-- [ ] Telegram.Bot (последняя версия)
-- [ ] Serilog.AspNetCore
-- [ ] Serilog.Sinks.Console
-- [ ] Serilog.Sinks.File
-- [ ] Polly
-- [ ] Microsoft.Extensions.Http.Polly
-- [ ] Microsoft.Extensions.Configuration.EnvironmentVariables
+- [x] Telegram.Bot (последняя версия)
+- [x] Serilog.AspNetCore
+- [x] Serilog.Sinks.Console
+- [x] Serilog.Sinks.File
+- [x] Polly
+- [x] Microsoft.Extensions.Http.Polly
+- [x] Microsoft.Extensions.Configuration.EnvironmentVariables
 
 ### 1.3 Конфигурация проекта
-- [ ] Настроить использование Nullable reference types
-- [ ] Настроить Central Package Management
-- [ ] Включить ImplicitUsings для .NET 9
-- [ ] Настроить C# 13 features
+- [x] Настроить использование Nullable reference types
+- [x] Настроить Central Package Management
+- [x] Включить ImplicitUsings для .NET 9
+- [x] Настроить C# 13 features
 
 ---
 
