@@ -6,9 +6,13 @@ using Microsoft.Extensions.Options;
 
 namespace Keep2DFilesBot.Infrastructure.Storage;
 
-public sealed class FileStorage(IOptions<StorageConfiguration> options, ILogger<FileStorage> logger)
+public sealed class FileStorage(
+    IOptions<StorageConfiguration> options,
+    MetadataStorage metadataStorage,
+    ILogger<FileStorage> logger)
 {
     private readonly StorageConfiguration _config = options.Value;
+    private readonly MetadataStorage _metadataStorage = metadataStorage;
     private readonly ILogger<FileStorage> _logger = logger;
 
     public async Task<Result<FileMetadata>> SaveAsync(
@@ -49,6 +53,16 @@ public sealed class FileStorage(IOptions<StorageConfiguration> options, ILogger<
                 DownloadedAt = DateTime.UtcNow,
                 UserId = userId
             };
+
+            if (_config.SaveMetadata)
+            {
+                var saveMetadataResult = await _metadataStorage.SaveAsync(metadata, ct);
+
+                if (saveMetadataResult.IsFailure)
+                {
+                    return Result<FileMetadata>.Failure(saveMetadataResult.Error!);
+                }
+            }
 
             if (_logger.IsEnabled(LogLevel.Information))
             {

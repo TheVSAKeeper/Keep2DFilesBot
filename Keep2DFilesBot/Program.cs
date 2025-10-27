@@ -60,6 +60,7 @@ try
             return CreateTimeoutPolicy(options);
         });
 
+    builder.Services.AddSingleton<MetadataStorage>();
     builder.Services.AddSingleton<FileStorage>();
 
     builder.Services.AddScoped<DownloadFileHandler>();
