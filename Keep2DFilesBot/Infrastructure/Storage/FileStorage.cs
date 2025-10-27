@@ -9,10 +9,12 @@ namespace Keep2DFilesBot.Infrastructure.Storage;
 public sealed class FileStorage(
     IOptions<StorageConfiguration> options,
     MetadataStorage metadataStorage,
+    DownloadStatisticsStorage statisticsStorage,
     ILogger<FileStorage> logger)
 {
     private readonly StorageConfiguration _config = options.Value;
     private readonly MetadataStorage _metadataStorage = metadataStorage;
+    private readonly DownloadStatisticsStorage _statisticsStorage = statisticsStorage;
     private readonly ILogger<FileStorage> _logger = logger;
 
     public async Task<Result<FileMetadata>> SaveAsync(
@@ -62,6 +64,15 @@ public sealed class FileStorage(
                 {
                     return Result<FileMetadata>.Failure(saveMetadataResult.Error!);
                 }
+            }
+
+            var statisticsResult = await _statisticsStorage.RecordAsync(metadata, ct);
+
+            if (statisticsResult.IsFailure && _logger.IsEnabled(LogLevel.Warning))
+            {
+                _logger.LogWarning(
+                    "Не удалось обновить статистику скачиваний: {Error}",
+                    statisticsResult.Error);
             }
 
             if (_logger.IsEnabled(LogLevel.Information))

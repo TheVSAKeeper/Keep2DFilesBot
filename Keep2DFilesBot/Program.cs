@@ -61,6 +61,7 @@ try
         });
 
     builder.Services.AddSingleton<MetadataStorage>();
+    builder.Services.AddSingleton<DownloadStatisticsStorage>();
     builder.Services.AddSingleton<FileStorage>();
 
     builder.Services.AddScoped<DownloadFileHandler>();
