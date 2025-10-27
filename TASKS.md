@@ -17,6 +17,8 @@
 - [x] Polly
 - [x] Microsoft.Extensions.Http.Polly
 - [x] Microsoft.Extensions.Configuration.EnvironmentVariables
+- [ ] FluentValidation (опционально для валидации команд)
+- [ ] NetArchTest.Rules (опционально для архитектурных проверок)
 
 ### 1.3 Конфигурация проекта
 - [x] Настроить использование Nullable reference types
@@ -28,54 +30,57 @@
 
 ## Фаза 2: Базовая архитектура
 
-### 2.1 Модели данных
-- [ ] Создать DownloadRequest (URL, UserId, ChatId, MessageId)
-- [ ] Создать DownloadResult (Success, FilePath, Error, FileSize)
-- [ ] Создать UserInfo (UserId, Username, IsWhitelisted)
-- [ ] Создать FileMetadata (FileName, Size, MimeType, DownloadDate)
+### 2.1 Value Objects и общие модели
+- [x] Создать UserId (Value Object)
+- [x] Создать Url (Value Object)
+- [x] Создать FileMetadata (модель метаданных)
+- [ ] Подготовить модели статистики скачиваний (при необходимости)
 
 ### 2.2 Конфигурация приложения
-- [ ] Создать BotConfiguration (Token, AllowedUsers, WorkingDirectory)
-- [ ] Создать DownloadConfiguration (MaxFileSize, Timeout, RetryCount)
-- [ ] Создать StorageConfiguration (BasePath, OrganizationPattern)
-- [ ] Настроить Options pattern для конфигурации
-- [ ] Создать appsettings.json
-- [ ] Создать appsettings.Development.json
+- [x] Создать BotConfiguration (Token, AllowedUsers, WorkingDirectory)
+- [x] Создать DownloadConfiguration (MaxFileSize, Timeout, RetryCount)
+- [x] Создать StorageConfiguration (BasePath, OrganizationPattern)
+- [x] Настроить Options pattern для конфигурации
+- [x] Создать appsettings.json
+- [x] Создать appsettings.Development.json
 
 ### 2.3 Dependency Injection
-- [ ] Настроить Pure DI в Program.cs
-- [ ] Зарегистрировать все сервисы через Constructor Injection
-- [ ] Настроить HttpClient с Polly policies
-- [ ] Настроить Serilog как основной logger
+- [x] Настроить Pure DI в Program.cs
+- [x] Зарегистрировать все сервисы через Constructor Injection
+- [x] Настроить HttpClient с Polly policies
+- [x] Настроить Serilog как основной logger
 
 ---
 
 ## Фаза 3: Core Services
 
-### 3.1 TelegramBotService
-- [ ] Реализовать инициализацию бота
-- [ ] Настроить Long Polling
-- [ ] Обработка входящих сообщений
+### 3.1 Worker и обработка Telegram
+- [x] Реализовать инициализацию бота
+- [x] Настроить Long Polling
+- [x] Обработка входящих сообщений
 - [ ] Обработка команд (/start, /help, /stats)
-- [ ] Обработка URL в сообщениях
-- [ ] Отправка уведомлений пользователю
+- [ ] Вынести обработку /start, /help, /stats в Features/Commands/*
+- [ ] Настроить централизованный роутинг команд в Worker
+- [x] Обработка URL в сообщениях
+- [x] Отправка уведомлений пользователю
 
-### 3.2 DownloadService
-- [ ] Валидация URL (проверка на прямую ссылку)
-- [ ] Скачивание файла через HttpClient
-- [ ] Поддержка progress reporting
-- [ ] Определение типа файла по Content-Type
-- [ ] Определение имени файла из headers/URL
-- [ ] Retry logic через Polly
-- [ ] Обработка таймаутов
-- [ ] Логирование процесса скачивания
+### 3.2 Feature: DownloadFile
+- [x] Валидация URL через Value Object `Url`
+- [x] Скачивание файла через HttpClientFactory с Polly
+- [ ] Поддержка progress reporting (при необходимости)
+- [x] Определение имени файла и Content-Type
+- [x] Обработка таймаутов и ограничений по размеру
+- [x] Логирование процесса скачивания
+- [ ] Добавить FluentValidation для DownloadFileCommand (опционально)
 
-### 3.3 StorageService
-- [ ] Создание структуры директорий
-- [ ] Сохранение файла в файловую систему
-- [ ] Организация файлов (по дате/пользователю)
-- [ ] Генерация уникальных имен файлов
+### 3.3 Infrastructure: Storage
+- [x] Создание структуры директорий
+- [x] Сохранение файла в файловую систему
+- [x] Организация файлов (по дате/пользователю)
+- [x] Генерация уникальных имен файлов
 - [ ] Сохранение метаданных (JSON файл рядом)
+- [ ] Создать MetadataStorage для работы с JSON-метаданными
+- [ ] Реализовать накопление статистики скачиваний
 - [ ] Проверка доступного места на диске
 - [ ] Очистка временных файлов
 
@@ -98,20 +103,21 @@
 - [ ] `/admin_whitelist_add <user_id>` - добавить в whitelist
 - [ ] `/admin_whitelist_remove <user_id>` - удалить из whitelist
 - [ ] `/admin_whitelist_list` - показать whitelist
+- [ ] Реализовать сбор и отображение статистики скачиваний в командах
 
 ### 4.2 Обработка ошибок
-- [ ] Обработка недоступных URL
-- [ ] Обработка таймаутов
-- [ ] Обработка ошибок сети
+- [x] Обработка недоступных URL
+- [x] Обработка таймаутов
+- [x] Обработка ошибок сети
 - [ ] Обработка нехватки места на диске
-- [ ] Информирование пользователя об ошибках
+- [x] Информирование пользователя об ошибках
 - [ ] Централизованная обработка исключений
 
 ### 4.3 Логирование и мониторинг
-- [ ] Структурированное логирование через Serilog
-- [ ] Логирование всех операций скачивания
-- [ ] Логирование ошибок с контекстом
-- [ ] Ротация лог-файлов
+- [x] Структурированное логирование через Serilog
+- [x] Логирование всех операций скачивания
+- [x] Логирование ошибок с контекстом
+- [x] Ротация лог-файлов
 - [ ] Health checks endpoint (для Docker)
 
 ---
@@ -170,12 +176,12 @@
 ## Фаза 7: Документация
 
 ### 7.1 README.md
-- [ ] Описание проекта
-- [ ] Требования (Docker, .NET 9)
-- [ ] Инструкция по установке
-- [ ] Конфигурация (environment variables)
+- [x] Описание проекта
+- [x] Требования (Docker, .NET 9)
+- [x] Инструкция по установке
+- [x] Конфигурация (environment variables)
 - [ ] Примеры использования
-- [ ] Команды бота
+- [x] Команды бота
 - [ ] Troubleshooting
 
 ### 7.2 DEPLOYMENT.md
@@ -208,6 +214,8 @@
 - [ ] Тесты скачивания файлов
 - [ ] Тесты сохранения файлов
 - [ ] Тесты end-to-end сценариев
+- [ ] Тесты обработки команд Telegram
+- [ ] Архитектурные тесты (NetArchTest)
 
 ### 8.3 Тестирование в Docker
 - [ ] Проверка работы в контейнере
