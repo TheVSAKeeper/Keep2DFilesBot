@@ -1,3 +1,4 @@
+using Keep2DFilesBot.Features.Commands;
 using Keep2DFilesBot.Features.DownloadFile;
 using Keep2DFilesBot.Shared.Models;
 using Microsoft.Extensions.DependencyInjection;
@@ -12,10 +13,12 @@ namespace Keep2DFilesBot;
 public sealed class Worker(
     ITelegramBotClient botClient,
     IServiceProvider serviceProvider,
+    CommandRouter commandRouter,
     ILogger<Worker> logger) : BackgroundService
 {
     private readonly ITelegramBotClient _botClient = botClient;
     private readonly IServiceProvider _serviceProvider = serviceProvider;
+    private readonly CommandRouter _commandRouter = commandRouter;
     private readonly ILogger<Worker> _logger = logger;
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -103,30 +106,35 @@ public sealed class Worker(
 
     private async Task HandleCommandAsync(ITelegramBotClient client, Message message, CancellationToken ct)
     {
-        var command = message.Text!.Split(' ')[0].ToLowerInvariant();
+        var parts = message.Text!
+            .Split(' ', StringSplitOptions.RemoveEmptyEntries);
 
-        switch (command)
+        var command = parts.Length > 0 ? parts[0].ToLowerInvariant() : string.Empty;
+        var arguments = parts.Length > 1 ? parts.Skip(1).ToArray() : Array.Empty<string>();
+
+        var context = new CommandContext(
+            client,
+            message,
+            command,
+            arguments);
+
+        var result = await _commandRouter.RouteAsync(context, ct);
+
+        if (result.IsSuccess && result.Payload is { } payload)
         {
-            case "/start":
-                await client.SendMessage(
-                    chatId: message.Chat.Id,
-                    text: "👋 Добро пожаловать в Keep2DFilesBot! Отправьте ссылку, чтобы бот скачал файл и сохранил его.",
-                    cancellationToken: ct);
-                break;
+            await client.SendMessage(
+                chatId: message.Chat.Id,
+                text: payload.Text,
+                cancellationToken: ct);
+            return;
+        }
 
-            case "/help":
-                await client.SendMessage(
-                    chatId: message.Chat.Id,
-                    text: "Отправьте прямую HTTP/HTTPS ссылку на файл. Бот скачает файл и сохранит его с вашими метаданными.",
-                    cancellationToken: ct);
-                break;
-
-            default:
-                await client.SendMessage(
-                    chatId: message.Chat.Id,
-                    text: "Неизвестная команда. Используйте /help для справки.",
-                    cancellationToken: ct);
-                break;
+        if (result.IsFailure && result.Error is { Length: > 0 })
+        {
+            await client.SendMessage(
+                chatId: message.Chat.Id,
+                text: result.Error,
+                cancellationToken: ct);
         }
     }
 

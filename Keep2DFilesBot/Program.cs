@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http;
 using Keep2DFilesBot;
+using Keep2DFilesBot.Features.Commands;
 using Keep2DFilesBot.Features.DownloadFile;
 using Keep2DFilesBot.Infrastructure.Storage;
 using Keep2DFilesBot.Shared.Configuration;
@@ -62,6 +63,11 @@ try
     builder.Services.AddSingleton<FileStorage>();
 
     builder.Services.AddScoped<DownloadFileHandler>();
+
+    builder.Services.AddSingleton<ICommandHandler, StartCommandHandler>();
+    builder.Services.AddSingleton<ICommandHandler, HelpCommandHandler>();
+    builder.Services.AddSingleton<ICommandHandler, StatsCommandHandler>();
+    builder.Services.AddSingleton<CommandRouter>();
 
     builder.Services.AddHostedService<Worker>();
 
