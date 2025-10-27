@@ -1,6 +1,8 @@
 using System.Net;
 using System.Net.Http;
 using Keep2DFilesBot;
+using Keep2DFilesBot.Features.DownloadFile;
+using Keep2DFilesBot.Infrastructure.Storage;
 using Keep2DFilesBot.Shared.Configuration;
 using Microsoft.Extensions.Options;
 using Polly;
@@ -46,11 +48,6 @@ try
     builder.Services.AddSingleton<ITelegramBotClient>(new TelegramBotClient(botConfig.Token));
 
     builder.Services.AddHttpClient("DownloadClient")
-        .ConfigureHttpClient((sp, client) =>
-        {
-            var options = sp.GetRequiredService<IOptions<DownloadConfiguration>>().Value;
-            client.Timeout = TimeSpan.FromSeconds(Math.Max(1, options.TimeoutSeconds));
-        })
         .AddPolicyHandler((sp, _) =>
         {
             var options = sp.GetRequiredService<IOptions<DownloadConfiguration>>().Value;
@@ -61,6 +58,10 @@ try
             var options = sp.GetRequiredService<IOptions<DownloadConfiguration>>().Value;
             return CreateTimeoutPolicy(options);
         });
+
+    builder.Services.AddSingleton<FileStorage>();
+
+    builder.Services.AddScoped<DownloadFileHandler>();
 
     builder.Services.AddHostedService<Worker>();
 

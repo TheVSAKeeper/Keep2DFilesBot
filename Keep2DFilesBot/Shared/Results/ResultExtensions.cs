@@ -65,4 +65,39 @@ public static class ResultExtensions
 
         return result;
     }
+
+    public static async Task<Result<TNew>> ThenAsync<T, TNew>(
+        this Task<Result<T>> resultTask,
+        Func<T, Task<Result<TNew>>> binder)
+    {
+        ArgumentNullException.ThrowIfNull(resultTask);
+        ArgumentNullException.ThrowIfNull(binder);
+
+        var result = await resultTask.ConfigureAwait(false);
+        return await result.ThenAsync(binder).ConfigureAwait(false);
+    }
+
+    public static async Task<Result<T>> EnsureAsync<T>(
+        this Task<Result<T>> resultTask,
+        Func<T, Task<bool>> predicate,
+        string errorMessage)
+    {
+        ArgumentNullException.ThrowIfNull(resultTask);
+        ArgumentNullException.ThrowIfNull(predicate);
+        ArgumentException.ThrowIfNullOrWhiteSpace(errorMessage);
+
+        var result = await resultTask.ConfigureAwait(false);
+        return await result.EnsureAsync(predicate, errorMessage).ConfigureAwait(false);
+    }
+
+    public static async Task<Result<T>> TapAsync<T>(
+        this Task<Result<T>> resultTask,
+        Func<T, Task> action)
+    {
+        ArgumentNullException.ThrowIfNull(resultTask);
+        ArgumentNullException.ThrowIfNull(action);
+
+        var result = await resultTask.ConfigureAwait(false);
+        return await result.TapAsync(action).ConfigureAwait(false);
+    }
 }
