@@ -1,0 +1,7 @@
+services:
+  keep2dfilesbot:
+    environment:
+      DOTNET_ENVIRONMENT: Development
+    volumes:
+      - ./Keep2DFilesBot/appsettings.Development.json:/app/appsettings.Development.json:ro
+      - ./Keep2DFilesBot/appsettings.json:/app/appsettings.json:ro

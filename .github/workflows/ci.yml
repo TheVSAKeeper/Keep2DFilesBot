@@ -1,0 +1,73 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 9.0.x
+
+      - name: Cache NuGet
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.nuget/packages
+            ~/.local/share/NuGet/v3-cache
+          key: ${{ runner.os }}-nuget-${{ hashFiles('**/Directory.Packages.props', '**/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore
+        run: dotnet restore Keep2DFilesBot.slnx
+
+      - name: Build
+        run: dotnet build Keep2DFilesBot.slnx --configuration Release --no-restore
+
+      - name: Format
+        run: dotnet format Keep2DFilesBot.slnx --verify-no-changes
+
+      - name: Test
+        run: |
+          set -euo pipefail
+          output=$(dotnet test Keep2DFilesBot.slnx --configuration Release --no-build || true)
+          echo "$output"
+          if echo "$output" | grep -q "No test is available"; then
+            echo "Тесты отсутствуют"
+            exit 0
+          fi
+          if echo "$output" | grep -q "Test Run Successful"; then
+            exit 0
+          fi
+          exit 1
+
+      - name: Login to GHCR
+        if: github.ref == 'refs/heads/main'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build Docker image
+        if: github.ref == 'refs/heads/main'
+        run: |
+          docker build -t ghcr.io/${{ github.repository }}/keep2dfilesbot:latest .
+          docker tag ghcr.io/${{ github.repository }}/keep2dfilesbot:latest ghcr.io/${{ github.repository }}/keep2dfilesbot:${{ github.sha }}
+
+      - name: Push Docker image
+        if: github.ref == 'refs/heads/main'
+        run: |
+          docker push ghcr.io/${{ github.repository }}/keep2dfilesbot:latest
+          docker push ghcr.io/${{ github.repository }}/keep2dfilesbot:${{ github.sha }}
