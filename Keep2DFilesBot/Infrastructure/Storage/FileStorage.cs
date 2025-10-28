@@ -1,3 +1,4 @@
+using System;
 using System.Globalization;
 using Keep2DFilesBot.Shared.Configuration;
 using Keep2DFilesBot.Shared.Models;
@@ -22,7 +23,9 @@ public sealed class FileStorage(
         UserId userId,
         string? fileName,
         string contentType,
-        CancellationToken ct)
+        long? totalBytes = null,
+        IProgress<DownloadProgress>? progress = null,
+        CancellationToken ct = default)
     {
         ArgumentNullException.ThrowIfNull(stream);
         ArgumentException.ThrowIfNullOrWhiteSpace(contentType);
@@ -43,7 +46,25 @@ public sealed class FileStorage(
             var filePath = Path.Combine(dateDirectory, name);
 
             await using var destination = File.Create(filePath);
-            await stream.CopyToAsync(destination, ct);
+
+            progress?.Report(new DownloadProgress(0, totalBytes));
+
+            var buffer = new byte[81920];
+            var totalRead = 0L;
+
+            while (true)
+            {
+                var read = await stream.ReadAsync(buffer.AsMemory(0, buffer.Length), ct);
+                if (read == 0)
+                {
+                    break;
+                }
+
+                await destination.WriteAsync(buffer.AsMemory(0, read), ct);
+                totalRead += read;
+                progress?.Report(new DownloadProgress(totalRead, totalBytes));
+            }
+
             await destination.FlushAsync(ct);
 
             var metadata = new FileMetadata

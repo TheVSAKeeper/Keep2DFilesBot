@@ -12,5 +12,6 @@
     <PackageVersion Include="Serilog.Sinks.Console" Version="6.0.0" />
     <PackageVersion Include="Serilog.Sinks.File" Version="7.0.0" />
     <PackageVersion Include="Telegram.Bot" Version="22.7.3" />
+    <PackageVersion Include="FluentValidation" Version="11.9.0" />
   </ItemGroup>
 </Project>

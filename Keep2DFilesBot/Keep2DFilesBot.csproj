@@ -18,5 +18,6 @@
     <PackageReference Include="Serilog.Sinks.Console" />
     <PackageReference Include="Serilog.Sinks.File" />
     <PackageReference Include="Telegram.Bot" />
+    <PackageReference Include="FluentValidation" />
   </ItemGroup>
 </Project>

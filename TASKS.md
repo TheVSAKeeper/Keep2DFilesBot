@@ -67,11 +67,11 @@
 ### 3.2 Feature: DownloadFile
 - [x] Валидация URL через Value Object `Url`
 - [x] Скачивание файла через HttpClientFactory с Polly
-- [ ] Поддержка progress reporting (при необходимости)
+- [x] Поддержка progress reporting (при необходимости)
 - [x] Определение имени файла и Content-Type
 - [x] Обработка таймаутов и ограничений по размеру
 - [x] Логирование процесса скачивания
-- [ ] Добавить FluentValidation для DownloadFileCommand (опционально)
+- [x] Добавить FluentValidation для DownloadFileCommand (опционально)
 
 ### 3.3 Infrastructure: Storage
 - [x] Создание структуры директорий

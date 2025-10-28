@@ -75,33 +75,57 @@ public sealed class Worker(
             return;
 
         using var scope = _serviceProvider.CreateScope();
-        var handler = scope.ServiceProvider.GetRequiredService<DownloadFileHandler>();
+        var downloadService = scope.ServiceProvider.GetRequiredService<DownloadFileService>();
+
+        var progressMessage = await TrySendProgressMessageAsync(client, message, ct);
+        TelegramDownloadProgressReporter? progressReporter = null;
+
+        if (progressMessage is not null)
+        {
+            progressReporter = new TelegramDownloadProgressReporter(
+                client,
+                message.Chat.Id,
+                progressMessage.MessageId,
+                _logger);
+        }
 
         var command = new DownloadFileCommand
         {
             Url = message.Text,
             UserId = (UserId)message.From.Id,
             ChatId = message.Chat.Id,
-            MessageId = message.MessageId
+            MessageId = message.MessageId,
+            Progress = progressReporter
         };
 
-        var result = await handler.HandleAsync(command, ct);
+        var result = await downloadService.DownloadAsync(command, ct);
+
+        if (progressReporter is not null)
+        {
+            await progressReporter.CompleteAsync();
+        }
 
         if (result.IsSuccess)
         {
             var metadata = result.Value!;
-            await client.SendMessage(
-                chatId: message.Chat.Id,
-                text: $"✅ Файл сохранён\nИмя: {metadata.FileName}\nРазмер: {metadata.FormattedSize}",
-                cancellationToken: ct);
+            await TryEditOrSendFinalAsync(
+                client,
+                message,
+                progressMessage,
+                $"✅ Файл сохранён\nИмя: {metadata.FileName}\nРазмер: {metadata.FormattedSize}",
+                ct);
         }
         else
         {
-            await client.SendMessage(
-                chatId: message.Chat.Id,
-                text: $"❌ Ошибка: {result.Error}",
-                cancellationToken: ct);
+            await TryEditOrSendFinalAsync(
+                client,
+                message,
+                progressMessage,
+                $"❌ Ошибка: {result.Error}",
+                ct);
         }
+
+        progressReporter?.Dispose();
     }
 
     private async Task HandleCommandAsync(ITelegramBotClient client, Message message, CancellationToken ct)
@@ -154,5 +178,55 @@ public sealed class Worker(
     private static bool IsDownloadCandidate(string text)
     {
         return Url.Create(text).IsSuccess;
+    }
+
+    private async Task<Message?> TrySendProgressMessageAsync(ITelegramBotClient client, Message message, CancellationToken ct)
+    {
+        try
+        {
+            return await client.SendMessage(
+                chatId: message.Chat.Id,
+                text: "⬇️ Скачивание файла\nПодготовка...",
+                cancellationToken: ct);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Не удалось отправить сообщение с прогрессом");
+            return null;
+        }
+    }
+
+    private async Task TryEditOrSendFinalAsync(
+        ITelegramBotClient client,
+        Message sourceMessage,
+        Message? progressMessage,
+        string text,
+        CancellationToken ct)
+    {
+        if (progressMessage is not null)
+        {
+            try
+            {
+                await client.EditMessageText(
+                    chatId: sourceMessage.Chat.Id,
+                    messageId: progressMessage.MessageId,
+                    text: text,
+                    cancellationToken: ct);
+                return;
+            }
+            catch (ApiRequestException ex) when (ex.ErrorCode == 400 && ex.Message.Contains("message is not modified", StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Не удалось обновить сообщение с прогрессом");
+            }
+        }
+
+        await client.SendMessage(
+            chatId: sourceMessage.Chat.Id,
+            text: text,
+            cancellationToken: ct);
     }
 }

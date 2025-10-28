@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http;
+using FluentValidation;
 using Keep2DFilesBot;
 using Keep2DFilesBot.Features.Commands;
 using Keep2DFilesBot.Features.DownloadFile;
@@ -65,6 +66,8 @@ try
     builder.Services.AddSingleton<FileStorage>();
 
     builder.Services.AddScoped<DownloadFileHandler>();
+    builder.Services.AddScoped<DownloadFileService>();
+    builder.Services.AddScoped<IValidator<DownloadFileCommand>, DownloadFileCommandValidator>();
 
     builder.Services.AddSingleton<ICommandHandler, StartCommandHandler>();
     builder.Services.AddSingleton<ICommandHandler, HelpCommandHandler>();

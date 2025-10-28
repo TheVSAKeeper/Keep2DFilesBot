@@ -26,7 +26,7 @@ public sealed class DownloadFileHandler(
         return await Url.Create(command.Url)
             .ThenAsync(url => DownloadFileAsync(url, ct))
             .ThenAsync(response => EnsureFileSizeAsync(response, ct))
-            .ThenAsync(response => SaveFileAsync(response, command.UserId, ct));
+            .ThenAsync(response => SaveFileAsync(response, command, ct));
     }
 
     private async Task<Result<HttpResponseMessage>> DownloadFileAsync(Url url, CancellationToken ct)
@@ -102,13 +102,20 @@ public sealed class DownloadFileHandler(
         return Result<HttpResponseMessage>.Success(response);
     }
 
-    private async Task<Result<FileMetadata>> SaveFileAsync(HttpResponseMessage response, UserId userId, CancellationToken ct)
+    private async Task<Result<FileMetadata>> SaveFileAsync(HttpResponseMessage response, DownloadFileCommand command, CancellationToken ct)
     {
         await using var stream = await response.Content.ReadAsStreamAsync(ct);
         var fileName = ResolveFileName(response);
         var contentType = response.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
 
-        var result = await _fileStorage.SaveAsync(stream, userId, fileName, contentType, ct);
+        var result = await _fileStorage.SaveAsync(
+            stream,
+            command.UserId,
+            fileName,
+            contentType,
+            response.Content.Headers.ContentLength,
+            command.Progress,
+            ct);
         response.Dispose();
         return result;
     }
