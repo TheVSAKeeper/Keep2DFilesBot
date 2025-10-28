@@ -486,3 +486,5 @@ $RECYCLE.BIN/
 *.swp
 .vscode/*
 /commit_msg.txt
+*/appsettings.Development.json
+*/data

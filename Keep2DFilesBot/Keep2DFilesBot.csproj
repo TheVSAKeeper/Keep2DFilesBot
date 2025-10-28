@@ -20,4 +20,10 @@
     <PackageReference Include="Telegram.Bot" />
     <PackageReference Include="FluentValidation" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="appsettings.Development.json">
+      <DependentUpon>appsettings.json</DependentUpon>
+    </Content>
+  </ItemGroup>
 </Project>

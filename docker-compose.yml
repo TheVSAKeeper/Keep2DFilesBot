@@ -1,15 +1,13 @@
 services:
   keep2dfilesbot:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    image: keep2dfilesbot:latest
+    image: ${KEEP2DFILESBOT_IMAGE:-thevsakeeper/keep2dfilesbot:latest}
+    pull_policy: always
     container_name: keep2dfilesbot
     restart: unless-stopped
     environment:
       DOTNET_ENVIRONMENT: Production
       BotConfiguration__Token: ${BOT_TOKEN:?BOT_TOKEN_REQUIRED}
-      BotConfiguration__AllowedUsers__0: ${BOT_ALLOWED_USER_0:?BOT_ALLOWED_USER_0_REQUIRED}
+      BotConfiguration__AllowedUsers__0: ${BOT_ALLOWED_USER_0:-0}
       BotConfiguration__WorkingDirectory: ${BOT_WORKING_DIRECTORY:-/app/data}
       BotConfiguration__IsPublic: ${BOT_IS_PUBLIC:-false}
       DownloadConfiguration__MaxFileSize: ${DOWNLOAD_MAX_FILE_SIZE:-104857600}
@@ -20,11 +18,7 @@ services:
       StorageConfiguration__DateFormat: ${STORAGE_DATE_FORMAT:-yyyy-MM-dd}
       StorageConfiguration__SaveMetadata: ${STORAGE_SAVE_METADATA:-true}
     volumes:
-      - bot_data:/app/data
-      - bot_logs:/app/logs
+      - ./data:/app/data
+      - ./logs:/app/logs
     env_file:
       - .env
-
-volumes:
-  bot_data:
-  bot_logs:

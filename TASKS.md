@@ -125,23 +125,23 @@
 ## Фаза 5: Контейнеризация
 
 ### 5.1 Dockerfile
-- [ ] Создать multi-stage Dockerfile
-- [ ] Использовать официальный образ .NET 9
-- [ ] Оптимизировать размер образа
-- [ ] Настроить non-root пользователя
-- [ ] Настроить volumes для данных и логов
-- [ ] Настроить HEALTHCHECK
+- [x] Создать multi-stage Dockerfile
+- [x] Использовать официальный образ .NET 9
+- [x] Оптимизировать размер образа
+- [x] Настроить non-root пользователя
+- [x] Настроить volumes для данных и логов
+- [x] Настроить HEALTHCHECK
 
 ### 5.2 Docker Compose
-- [ ] Создать docker-compose.yml
-- [ ] Настроить environment variables
-- [ ] Настроить volumes для persistence
-- [ ] Настроить restart policy
+- [x] Создать docker-compose.yml
+- [x] Настроить environment variables
+- [x] Настроить volumes для persistence
+- [x] Настроить restart policy
 - [ ] Настроить сеть (при необходимости)
-- [ ] Добавить docker-compose.override.yml для dev
+- [x] Добавить docker-compose.override.yml для dev
 
 ### 5.3 Environment конфигурация
-- [ ] Создать .env.example
+- [x] Создать .env.example
 - [ ] Документировать все переменные окружения
 - [ ] Настроить секреты (bot token)
 
@@ -150,17 +150,17 @@
 ## Фаза 6: CI/CD
 
 ### 6.1 GitHub Actions - Build & Test
-- [ ] Создать workflow для build
-- [ ] Настроить dotnet restore
-- [ ] Настроить dotnet build
+- [x] Создать workflow для build
+- [x] Настроить dotnet restore
+- [x] Настроить dotnet build
 - [ ] Настроить dotnet test (когда будут тесты)
 - [ ] Проверка форматирования (dotnet format)
-- [ ] Кеширование NuGet пакетов
+- [x] Кеширование NuGet пакетов
 
 ### 6.2 GitHub Actions - Docker
-- [ ] Сборка Docker образа
+- [x] Сборка Docker образа
 - [ ] Пуш образа в GitHub Container Registry
-- [ ] Тегирование образов (latest, version, commit SHA)
+- [x] Тегирование образов (latest, version, commit SHA)
 - [ ] Очистка старых образов
 
 ### 6.3 GitHub Actions - Deploy
