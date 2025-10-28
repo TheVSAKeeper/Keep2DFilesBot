@@ -6,7 +6,7 @@ using Telegram.Bot.Exceptions;
 
 namespace Keep2DFilesBot.Features.DownloadFile;
 
-public sealed class TelegramDownloadProgressReporter : IProgress<DownloadProgress>, IDisposable
+public abstract class TelegramProgressReporterBase : IProgress<DownloadProgress>, IDisposable
 {
     private readonly ITelegramBotClient _botClient;
     private readonly long _chatId;
@@ -18,7 +18,7 @@ public sealed class TelegramDownloadProgressReporter : IProgress<DownloadProgres
     private DateTime _lastUpdate;
     private bool _isCompleted;
 
-    public TelegramDownloadProgressReporter(
+    protected TelegramProgressReporterBase(
         ITelegramBotClient botClient,
         long chatId,
         int messageId,
@@ -86,7 +86,7 @@ public sealed class TelegramDownloadProgressReporter : IProgress<DownloadProgres
         }
     }
 
-    private bool ShouldUpdate(DownloadProgress value)
+    protected virtual bool ShouldUpdate(DownloadProgress value)
     {
         var now = DateTime.UtcNow;
 
@@ -134,26 +134,14 @@ public sealed class TelegramDownloadProgressReporter : IProgress<DownloadProgres
         }
     }
 
+    protected abstract string BuildText(DownloadProgress value);
+
     private static bool IsNotModifiedError(ApiRequestException exception)
     {
         return exception.ErrorCode == 400 && exception.Message.Contains("message is not modified", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string BuildText(DownloadProgress value)
-    {
-        if (value.TotalBytes is long total && total > 0)
-        {
-            var percent = (int)Math.Clamp((double)value.BytesReceived * 100 / total, 0, 100);
-            var downloaded = FormatSize(value.BytesReceived);
-            var totalText = FormatSize(total);
-            return $"⬇️ Скачивание файла\nПрогресс: {percent}% ({downloaded} из {totalText})";
-        }
-
-        var received = FormatSize(value.BytesReceived);
-        return $"⬇️ Скачивание файла\nПолучено: {received}";
-    }
-
-    private static string FormatSize(long bytes)
+    protected static string FormatSize(long bytes)
     {
         if (bytes < 1024)
         {
@@ -179,5 +167,57 @@ public sealed class TelegramDownloadProgressReporter : IProgress<DownloadProgres
     public void Dispose()
     {
         _semaphore.Dispose();
+    }
+}
+
+public sealed class TelegramDownloadProgressReporter : TelegramProgressReporterBase
+{
+    public TelegramDownloadProgressReporter(
+        ITelegramBotClient botClient,
+        long chatId,
+        int messageId,
+        ILogger logger)
+        : base(botClient, chatId, messageId, logger)
+    {
+    }
+
+    protected override string BuildText(DownloadProgress value)
+    {
+        if (value.TotalBytes is long total && total > 0)
+        {
+            var percent = (int)Math.Clamp((double)value.BytesReceived * 100 / total, 0, 100);
+            var downloaded = FormatSize(value.BytesReceived);
+            var totalText = FormatSize(total);
+            return $"⬇️ Скачивание файла\nПрогресс: {percent}% ({downloaded} из {totalText})";
+        }
+
+        var received = FormatSize(value.BytesReceived);
+        return $"⬇️ Скачивание файла\nПолучено: {received}";
+    }
+}
+
+public sealed class TelegramUploadProgressReporter : TelegramProgressReporterBase
+{
+    public TelegramUploadProgressReporter(
+        ITelegramBotClient botClient,
+        long chatId,
+        int messageId,
+        ILogger logger)
+        : base(botClient, chatId, messageId, logger)
+    {
+    }
+
+    protected override string BuildText(DownloadProgress value)
+    {
+        if (value.TotalBytes is long total && total > 0)
+        {
+            var percent = (int)Math.Clamp((double)value.BytesReceived * 100 / total, 0, 100);
+            var uploaded = FormatSize(value.BytesReceived);
+            var totalText = FormatSize(total);
+            return $"⬆️ Отправка файла\nПрогресс: {percent}% ({uploaded} из {totalText})";
+        }
+
+        var sent = FormatSize(value.BytesReceived);
+        return $"⬆️ Отправка файла\nОтправлено: {sent}";
     }
 }

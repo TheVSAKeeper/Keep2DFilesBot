@@ -1,3 +1,4 @@
+using System.IO;
 using Keep2DFilesBot.Features.Commands;
 using Keep2DFilesBot.Features.DownloadFile;
 using Keep2DFilesBot.Shared.Models;
@@ -108,11 +109,33 @@ public sealed class Worker(
         if (result.IsSuccess)
         {
             var metadata = result.Value!;
+            TelegramUploadProgressReporter? uploadReporter = null;
+
+            if (progressMessage is not null)
+            {
+                uploadReporter = new TelegramUploadProgressReporter(
+                    client,
+                    message.Chat.Id,
+                    progressMessage.MessageId,
+                    _logger);
+            }
+
+            var sent = await TrySendDocumentAsync(
+                client,
+                message,
+                metadata,
+                uploadReporter,
+                ct);
+
+            uploadReporter?.Dispose();
+
             await TryEditOrSendFinalAsync(
                 client,
                 message,
                 progressMessage,
-                $"✅ Файл сохранён\nИмя: {metadata.FileName}\nРазмер: {metadata.FormattedSize}",
+                sent
+                    ? $"✅ Файл отправлен\nИмя: {metadata.FileName}\nРазмер: {metadata.FormattedSize}"
+                    : $"❌ Не удалось отправить файл\nИмя: {metadata.FileName}",
                 ct);
         }
         else
@@ -228,5 +251,149 @@ public sealed class Worker(
             chatId: sourceMessage.Chat.Id,
             text: text,
             cancellationToken: ct);
+    }
+
+    private async Task<bool> TrySendDocumentAsync(
+        ITelegramBotClient client,
+        Message sourceMessage,
+        FileMetadata metadata,
+        TelegramUploadProgressReporter? progressReporter,
+        CancellationToken ct)
+    {
+        try
+        {
+            await using var fileStream = File.OpenRead(metadata.FilePath);
+            var totalBytes = fileStream.Length;
+            Stream stream = fileStream;
+
+            if (progressReporter is not null)
+            {
+                stream = new ProgressStream(fileStream, totalBytes, progressReporter);
+            }
+
+            var document = new InputFileStream(stream, metadata.FileName);
+
+            await client.SendDocument(
+                chatId: sourceMessage.Chat.Id,
+                document: document,
+                caption: $"Имя: {metadata.FileName}\nРазмер: {metadata.FormattedSize}",
+                cancellationToken: ct);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Не удалось отправить файл пользователю");
+            return false;
+        }
+        finally
+        {
+            if (progressReporter is not null)
+            {
+                await progressReporter.CompleteAsync();
+            }
+        }
+    }
+
+    private sealed class ProgressStream : Stream
+    {
+        private readonly Stream _inner;
+        private readonly long _totalBytes;
+        private readonly IProgress<DownloadProgress> _progress;
+        private long _reportedBytes;
+
+        public ProgressStream(Stream inner, long totalBytes, IProgress<DownloadProgress> progress)
+        {
+            _inner = inner;
+            _totalBytes = totalBytes;
+            _progress = progress;
+            _progress.Report(new DownloadProgress(0, totalBytes));
+        }
+
+        public override bool CanRead => _inner.CanRead;
+        public override bool CanSeek => _inner.CanSeek;
+        public override bool CanWrite => _inner.CanWrite;
+        public override long Length => _inner.Length;
+
+        public override long Position
+        {
+            get => _inner.Position;
+            set => _inner.Position = value;
+        }
+
+        public override void Flush() => _inner.Flush();
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            var read = _inner.Read(buffer, offset, count);
+            Report(read);
+            return read;
+        }
+
+        public override int Read(Span<byte> buffer)
+        {
+            var read = _inner.Read(buffer);
+            Report(read);
+            return read;
+        }
+
+        public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            return ReadInternalAsync(buffer, cancellationToken);
+        }
+
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            return ReadInternalAsync(buffer.AsMemory(offset, count), cancellationToken).AsTask();
+        }
+
+        private async ValueTask<int> ReadInternalAsync(Memory<byte> buffer, CancellationToken cancellationToken)
+        {
+            var read = await _inner.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+            Report(read);
+            return read;
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => _inner.Seek(offset, origin);
+
+        public override void SetLength(long value) => _inner.SetLength(value);
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            _inner.Write(buffer, offset, count);
+        }
+
+        public override void Write(ReadOnlySpan<byte> buffer)
+        {
+            _inner.Write(buffer);
+        }
+
+        public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            return _inner.WriteAsync(buffer, cancellationToken);
+        }
+
+        public override Task FlushAsync(CancellationToken cancellationToken) => _inner.FlushAsync(cancellationToken);
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                _inner.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
+
+        private void Report(int bytesRead)
+        {
+            if (bytesRead <= 0)
+            {
+                return;
+            }
+
+            _reportedBytes += bytesRead;
+            _progress.Report(new DownloadProgress(_reportedBytes, _totalBytes));
+        }
     }
 }
