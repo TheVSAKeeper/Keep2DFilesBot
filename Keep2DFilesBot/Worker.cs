@@ -123,20 +123,22 @@ public sealed class Worker(
             var sent = await TrySendDocumentAsync(
                 client,
                 message,
+                progressMessage,
                 metadata,
                 uploadReporter,
                 ct);
 
             uploadReporter?.Dispose();
 
-            await TryEditOrSendFinalAsync(
-                client,
-                message,
-                progressMessage,
-                sent
-                    ? $"✅ Файл отправлен\nИмя: {metadata.FileName}\nРазмер: {metadata.FormattedSize}"
-                    : $"❌ Не удалось отправить файл\nИмя: {metadata.FileName}",
-                ct);
+            if (!sent)
+            {
+                await TryEditOrSendFinalAsync(
+                    client,
+                    message,
+                    progressMessage,
+                    $"❌ Не удалось отправить файл\nИмя: {metadata.FileName}",
+                    ct);
+            }
         }
         else
         {
@@ -256,6 +258,7 @@ public sealed class Worker(
     private async Task<bool> TrySendDocumentAsync(
         ITelegramBotClient client,
         Message sourceMessage,
+        Message? progressMessage,
         FileMetadata metadata,
         TelegramUploadProgressReporter? progressReporter,
         CancellationToken ct)
@@ -271,13 +274,32 @@ public sealed class Worker(
                 stream = new ProgressStream(fileStream, totalBytes, progressReporter);
             }
 
-            var document = new InputFileStream(stream, metadata.FileName);
+            var caption = $"✅ Файл отправлен\nИмя: {metadata.FileName}\nРазмер: {metadata.FormattedSize}";
 
-            await client.SendDocument(
-                chatId: sourceMessage.Chat.Id,
-                document: document,
-                caption: $"Имя: {metadata.FileName}\nРазмер: {metadata.FormattedSize}",
-                cancellationToken: ct);
+            if (progressMessage is not null)
+            {
+                var document = new InputFileStream(stream, metadata.FileName);
+                var media = new InputMediaDocument(document)
+                {
+                    Caption = caption
+                };
+
+                await client.EditMessageMedia(
+                    chatId: sourceMessage.Chat.Id,
+                    messageId: progressMessage.MessageId,
+                    media: media,
+                    cancellationToken: ct);
+            }
+            else
+            {
+                var document = new InputFileStream(stream, metadata.FileName);
+
+                await client.SendDocument(
+                    chatId: sourceMessage.Chat.Id,
+                    document: document,
+                    caption: caption,
+                    cancellationToken: ct);
+            }
 
             return true;
         }
